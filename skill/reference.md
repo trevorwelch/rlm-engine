@@ -140,13 +140,13 @@ chunks = [header + '\n' + '\n'.join(data_lines[i:i+chunk_size])
 ## Available Functions Reference
 
 ### `llm_query(prompt: str) -> str`
-Single Gemini completion. Best for:
+Single LLM completion. Best for:
 - Final synthesis of chunk results
 - One-off analysis of a specific section
 - Follow-up questions on earlier results
 
 ### `llm_query_batch(prompts: list[str]) -> list[str]`
-Parallel Gemini completions (up to 8 concurrent). Best for:
+Parallel LLM completions (up to 8 concurrent). Best for:
 - Analyzing multiple chunks simultaneously
 - Processing multiple questions against the same data
 - Any scenario with 2+ independent LLM calls
@@ -170,17 +170,6 @@ Standard library modules: `re`, `json`, `os`, `collections`, `itertools`, `math`
 - **File has nested structure** — Two-pass: first identify top-level structure, then analyze sub-sections
 - **Multiple questions** — Separate analysis passes for each question, then synthesize
 - **Results are contradictory** — Re-analyze conflicting chunks with more context
-
-## Cost Estimates
-
-Gemini 2.5 Flash pricing: $0.15/1M input, $0.60/1M output
-
-| Scenario | Est. Cost |
-|----------|-----------|
-| 50K char file, 5 chunks | ~$0.01 |
-| 500K char file, 10 chunks + synthesis | ~$0.05 |
-| 2M char file, 20 chunks + 2 synthesis | ~$0.15 |
-| 10M char multi-file, 50 chunks | ~$0.50 |
 
 ## Limitations (v1)
 

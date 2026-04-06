@@ -20,7 +20,7 @@ MAX_OUTPUT_CHARS = 12_000
 
 
 class REPLEnv:
-    def __init__(self, context_path: str, model: str = "gemini-2.5-flash"):
+    def __init__(self, context_path: str, model: str = "default"):
         self.context_path = context_path
         self.model = model
         self.temp_dir = tempfile.mkdtemp(prefix="rlm_")
@@ -56,11 +56,11 @@ class REPLEnv:
 
         # Build llm_query wrappers that bind the model
         def llm_query(prompt: str) -> str:
-            """Call Gemini on a text prompt. Use for semantic analysis of chunks."""
+            """Call local LLM on a text prompt. Use for semantic analysis of chunks."""
             return llm_completion(prompt, model=self.model)
 
         def llm_query_batch(prompts: list[str]) -> list[str]:
-            """Parallel Gemini calls on multiple prompts. Use for batch chunk analysis."""
+            """Parallel local LLM calls on multiple prompts. Use for batch chunk analysis."""
             return llm_completion_batch(prompts, model=self.model)
 
         self.globals = {

@@ -1,8 +1,8 @@
 """
 RLM Engine — MCP server for Recursive Language Model analysis.
 
-Provides a sandboxed Python REPL with Gemini sub-LLM calls for analyzing
-files that exceed context window limits.
+Provides a sandboxed Python REPL with local LLM sub-calls (via mlx-lm)
+for analyzing files that exceed context window limits.
 """
 
 import os
@@ -57,7 +57,7 @@ def _get_session(session_id: str) -> dict:
 @mcp.tool()
 def rlm_init(
     file_paths: list[str],
-    model: str = "gemini-2.5-flash",
+    model: str = "default",
 ) -> dict:
     """
     Initialize an RLM analysis session. Loads files into a Python REPL
@@ -66,7 +66,7 @@ def rlm_init(
 
     Args:
         file_paths: Absolute paths to files to analyze.
-        model: Gemini model for sub-LLM calls (default gemini-2.5-flash).
+        model: Model name for sub-LLM calls (default: whatever mlx-lm is serving).
 
     Returns:
         session_id, context_info (file sizes, line counts, total chars).

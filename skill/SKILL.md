@@ -5,7 +5,7 @@ description: >
   Model pattern. Use when the user asks to "analyze a large file", "process a huge
   document", "find patterns in a big codebase", "review a large log file", or needs
   to work with content too large for direct context. Loads files into a sandboxed
-  Python REPL and uses Gemini sub-LLM calls for parallel chunk analysis.
+  Python REPL and uses local LLM sub-calls for parallel chunk analysis.
 argument-hint: "<file_path> [query]"
 user-invocable: true
 allowed-tools: mcp__rlm-engine__*, Read, Glob, Grep, Write, Bash, WebSearch, WebFetch
@@ -13,7 +13,7 @@ allowed-tools: mcp__rlm-engine__*, Read, Glob, Grep, Write, Bash, WebSearch, Web
 
 # RLM — Recursive Language Model Analysis
 
-You are using the RLM pattern to analyze large files. **You write Python code that runs in a sandboxed REPL; Gemini Flash handles semantic analysis of chunks.**
+You are using the RLM pattern to analyze large files. **You write Python code that runs in a sandboxed REPL; a local LLM handles semantic analysis of chunks.**
 
 **Arguments received:** $ARGUMENTS
 
@@ -32,7 +32,7 @@ Parse the arguments to extract file path(s), URL(s), and/or query.
 
 ### 1b. Initialize session
 ```
-rlm_init(file_paths=["/absolute/path/to/file"], model="gemini-2.5-flash")
+rlm_init(file_paths=["/absolute/path/to/file"])
 ```
 This returns a `session_id` and `context_info` with file sizes, line counts, and total chars.
 
@@ -105,10 +105,10 @@ for i, result in chunk_results:
 ```
 
 ### Chunk sizing guidelines
-- Aim for **10K-50K+ chars per chunk** (Gemini Flash handles 1M tokens)
+- Aim for **10K-50K chars per chunk** (most local models handle 32k-128k tokens)
 - Target **5-15 chunks** per analysis pass
 - Too many tiny chunks = noisy results; too few huge chunks = less focus
-- If a single chunk exceeds 200K chars, consider sub-splitting it
+- If a single chunk exceeds 100K chars, consider sub-splitting it
 
 ### Iteration
 If results are incomplete or need refinement:
@@ -158,8 +158,8 @@ rlm_cleanup(session_id)
 
 | Function | Description |
 |----------|-------------|
-| `llm_query(prompt)` | Single Gemini completion — use for synthesis or one-off analysis |
-| `llm_query_batch(prompts)` | Parallel Gemini calls — use for analyzing multiple chunks |
+| `llm_query(prompt)` | Single LLM completion — use for synthesis or one-off analysis |
+| `llm_query_batch(prompts)` | Parallel LLM calls — use for analyzing multiple chunks |
 
 ## Available REPL Variables
 

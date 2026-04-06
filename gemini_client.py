@@ -1,5 +1,5 @@
 """
-Gemini API client for RLM sub-LLM calls.
+Local LLM client for RLM sub-LLM calls via mlx-lm (OpenAI-compatible API).
 
 Provides llm_completion() and llm_completion_batch() for the REPL environment.
 """
@@ -8,54 +8,50 @@ import os
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from google import genai
+import openai
 
-_client: genai.Client | None = None
+_client: openai.OpenAI | None = None
 _client_lock = threading.Lock()
 
 CALL_TIMEOUT = 120
 
 
-def get_client() -> genai.Client:
-    """Thread-safe lazy Gemini client initialization."""
+def get_client() -> openai.OpenAI:
+    """Thread-safe lazy client initialization."""
     global _client
     if _client is not None:
         return _client
     with _client_lock:
         if _client is None:
-            api_key = os.getenv("GEMINI_API_KEY")
-            if not api_key:
-                raise RuntimeError("GEMINI_API_KEY environment variable not set")
-            _client = genai.Client(api_key=api_key)
+            base_url = os.getenv("RLM_BASE_URL", "http://localhost:8080/v1")
+            api_key = os.getenv("RLM_API_KEY", "local")
+            _client = openai.OpenAI(base_url=base_url, api_key=api_key)
     return _client
 
 
-def llm_completion(prompt: str, model: str = "gemini-2.5-flash") -> str:
-    """Single Gemini completion. Returns the response text."""
+def llm_completion(prompt: str, model: str = "default") -> str:
+    """Single LLM completion. Returns the response text."""
     client = get_client()
     try:
-        response = client.models.generate_content(
+        response = client.chat.completions.create(
             model=model,
-            contents=[prompt],
+            messages=[{"role": "user", "content": prompt}],
         )
     except Exception as e:
         return f"[LLM_ERROR] {e}"
-    if response.text is None:
-        candidates = getattr(response, "candidates", [])
-        if candidates:
-            reason = getattr(candidates[0], "finish_reason", "unknown")
-            return f"[LLM_ERROR] Empty response (finish_reason: {reason})"
-        return "[LLM_ERROR] Empty response from Gemini"
-    return response.text
+    choice = response.choices[0] if response.choices else None
+    if choice is None or choice.message.content is None:
+        return "[LLM_ERROR] Empty response from local model"
+    return choice.message.content
 
 
 def llm_completion_batch(
     prompts: list[str],
-    model: str = "gemini-2.5-flash",
+    model: str = "default",
     max_workers: int = 8,
 ) -> list[str]:
     """
-    Parallel Gemini completions via ThreadPoolExecutor.
+    Parallel LLM completions via ThreadPoolExecutor.
 
     Returns results in the same order as the input prompts.
     Failed calls return the error message as a string.
@@ -72,7 +68,7 @@ def llm_completion_batch(
             try:
                 results[idx] = future.result(timeout=CALL_TIMEOUT)
             except TimeoutError:
-                results[idx] = "[LLM_ERROR] Gemini call timed out"
+                results[idx] = "[LLM_ERROR] LLM call timed out"
             except Exception as e:
                 results[idx] = f"[LLM_ERROR] {e}"
 
