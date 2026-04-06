@@ -1,0 +1,9 @@
+[project]
+name = "rlm-engine"
+version = "0.1.0"
+description = "Recursive Language Model engine — analyze files beyond context limits"
+requires-python = ">=3.10"
+dependencies = [
+    "google-genai>=1.0.0",
+    "fastmcp>=2.0.0,<3",
+]
