@@ -12,6 +12,7 @@ import openai
 
 _client: openai.OpenAI | None = None
 _client_lock = threading.Lock()
+_model_name: str | None = None
 
 CALL_TIMEOUT = 120
 
@@ -29,9 +30,27 @@ def get_client() -> openai.OpenAI:
     return _client
 
 
-def llm_completion(prompt: str, model: str = "default_model") -> str:
+def _resolve_model() -> str:
+    """Auto-detect the model name from the server's /v1/models endpoint."""
+    global _model_name
+    if _model_name is not None:
+        return _model_name
+    try:
+        client = get_client()
+        models = client.models.list()
+        if models.data:
+            _model_name = models.data[0].id
+            return _model_name
+    except Exception:
+        pass
+    _model_name = "default_model"
+    return _model_name
+
+
+def llm_completion(prompt: str, model: str | None = None) -> str:
     """Single LLM completion. Returns the response text."""
     client = get_client()
+    model = model or _resolve_model()
     try:
         response = client.chat.completions.create(
             model=model,
@@ -47,7 +66,7 @@ def llm_completion(prompt: str, model: str = "default_model") -> str:
 
 def llm_completion_batch(
     prompts: list[str],
-    model: str = "default_model",
+    model: str | None = None,
     max_workers: int = 8,
 ) -> list[str]:
     """

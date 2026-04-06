@@ -18,7 +18,7 @@ from fastmcp import FastMCP
 
 from repl_env import REPLEnv
 
-MLX_MODEL = os.getenv("RLM_MLX_MODEL", "mlx-community/gemma-3-12b-it-8bit")
+MLX_MODEL = os.getenv("RLM_MLX_MODEL", "mlx-community/gemma-4-e2b-it-4bit")
 MLX_PORT = int(os.getenv("RLM_MLX_PORT", "8080"))
 
 mcp = FastMCP("rlm-engine")
@@ -41,7 +41,7 @@ def _ensure_mlx_server():
         return
 
     _mlx_process = subprocess.Popen(
-        ["mlx_lm.server", "--model", MLX_MODEL, "--port", str(MLX_PORT)],
+        ["mlx_vlm.server", "--model", MLX_MODEL, "--port", str(MLX_PORT)],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
