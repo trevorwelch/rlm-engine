@@ -29,7 +29,7 @@ def get_client() -> openai.OpenAI:
     return _client
 
 
-def llm_completion(prompt: str, model: str = "default") -> str:
+def llm_completion(prompt: str, model: str = "default_model") -> str:
     """Single LLM completion. Returns the response text."""
     client = get_client()
     try:
@@ -47,7 +47,7 @@ def llm_completion(prompt: str, model: str = "default") -> str:
 
 def llm_completion_batch(
     prompts: list[str],
-    model: str = "default",
+    model: str = "default_model",
     max_workers: int = 8,
 ) -> list[str]:
     """

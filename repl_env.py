@@ -20,7 +20,7 @@ MAX_OUTPUT_CHARS = 12_000
 
 
 class REPLEnv:
-    def __init__(self, context_path: str, model: str = "default"):
+    def __init__(self, context_path: str, model: str = "default_model"):
         self.context_path = context_path
         self.model = model
         self.temp_dir = tempfile.mkdtemp(prefix="rlm_")
