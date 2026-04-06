@@ -51,7 +51,7 @@ git clone https://github.com/trevorwelch/rlm-engine.git ~/coding/rlm-engine
 ### 2. Start mlx-lm server
 
 ```bash
-mlx_lm.server --model mlx-community/Qwen3.5-9B-MLX-4bit --port 8080
+mlx_lm.server --model mlx-community/gemma-3-12b-it-8bit --port 8080
 ```
 
 Or any model you prefer. The engine auto-starts mlx-lm if it's not already running, so this step is optional.
@@ -91,7 +91,7 @@ ln -sf /path/to/rlm-engine/skill/reference.md ~/.claude/skills/rlm/reference.md
 |---------|---------|-------------|
 | `RLM_BASE_URL` | `http://localhost:8080/v1` | OpenAI-compatible API endpoint |
 | `RLM_API_KEY` | `local` | API key (not needed for mlx-lm) |
-| `RLM_MLX_MODEL` | `mlx-community/Qwen3.5-9B-MLX-4bit` | Model for auto-started mlx-lm server |
+| `RLM_MLX_MODEL` | `mlx-community/gemma-3-12b-it-8bit` | Model for auto-started mlx-lm server |
 | `RLM_MLX_PORT` | `8080` | Port for auto-started mlx-lm server |
 
 Works with any OpenAI-compatible server: mlx-lm, Ollama, vLLM, llama.cpp, LM Studio, etc.

@@ -18,7 +18,7 @@ from fastmcp import FastMCP
 
 from repl_env import REPLEnv
 
-MLX_MODEL = os.getenv("RLM_MLX_MODEL", "mlx-community/Qwen3.5-9B-MLX-4bit")
+MLX_MODEL = os.getenv("RLM_MLX_MODEL", "mlx-community/gemma-3-12b-it-8bit")
 MLX_PORT = int(os.getenv("RLM_MLX_PORT", "8080"))
 
 mcp = FastMCP("rlm-engine")
