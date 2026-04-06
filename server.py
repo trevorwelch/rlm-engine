@@ -6,6 +6,9 @@ for analyzing files that exceed context window limits.
 """
 
 import os
+import shutil
+import socket
+import subprocess
 import tempfile
 import time
 import uuid
@@ -15,7 +18,40 @@ from fastmcp import FastMCP
 
 from repl_env import REPLEnv
 
+MLX_MODEL = os.getenv("RLM_MLX_MODEL", "mlx-community/Qwen3.5-9B-MLX-4bit")
+MLX_PORT = int(os.getenv("RLM_MLX_PORT", "8080"))
+
 mcp = FastMCP("rlm-engine")
+_mlx_process: subprocess.Popen | None = None
+
+
+def _mlx_server_running() -> bool:
+    """Check if something is listening on the mlx-lm port."""
+    try:
+        with socket.create_connection(("127.0.0.1", MLX_PORT), timeout=1):
+            return True
+    except OSError:
+        return False
+
+
+def _ensure_mlx_server():
+    """Start mlx-lm server if it's not already running."""
+    global _mlx_process
+    if _mlx_server_running():
+        return
+
+    _mlx_process = subprocess.Popen(
+        ["mlx_lm.server", "--model", MLX_MODEL, "--port", str(MLX_PORT)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    # Wait for server to become ready
+    for _ in range(60):
+        time.sleep(1)
+        if _mlx_server_running():
+            return
+    raise RuntimeError(f"mlx-lm server failed to start on port {MLX_PORT}")
 
 # Session management
 _sessions: dict[str, dict] = {}  # session_id -> {"env": REPLEnv, "last_used": float}
@@ -72,6 +108,7 @@ def rlm_init(
         session_id, context_info (file sizes, line counts, total chars).
     """
     _cleanup_expired()
+    _ensure_mlx_server()
 
     # Validate files exist
     files_info = []
@@ -148,8 +185,8 @@ def rlm_exec(
     calls. The code has access to:
     - context_path: path to the loaded file(s)
     - scratch_dir: temp directory for scratch files
-    - llm_query(prompt): call Gemini on a text prompt (for analyzing chunks)
-    - llm_query_batch(prompts): parallel Gemini calls on multiple prompts
+    - llm_query(prompt): call local LLM on a text prompt (for analyzing chunks)
+    - llm_query_batch(prompts): parallel local LLM calls on multiple prompts
 
     Args:
         session_id: Session from rlm_init.
