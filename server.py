@@ -9,7 +9,9 @@ import os
 import shutil
 import socket
 import subprocess
+import sys
 import tempfile
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -40,6 +42,8 @@ def _ensure_mlx_server():
     if _mlx_server_running():
         return
 
+    print(f"Waiting for mlx-lm server to start...", file=sys.stderr)
+
     _mlx_process = subprocess.Popen(
         ["mlx_vlm.server", "--model", MLX_MODEL, "--port", str(MLX_PORT)],
         stdout=subprocess.DEVNULL,
@@ -50,11 +54,13 @@ def _ensure_mlx_server():
     for _ in range(60):
         time.sleep(1)
         if _mlx_server_running():
+            print(f"mlx-lm server ready on port {MLX_PORT}", file=sys.stderr)
             return
     raise RuntimeError(f"mlx-lm server failed to start on port {MLX_PORT}")
 
 # Session management
 _sessions: dict[str, dict] = {}  # session_id -> {"env": REPLEnv, "last_used": float}
+_sessions_lock = threading.Lock()
 SESSION_TIMEOUT = 30 * 60  # 30 minutes
 
 
@@ -73,7 +79,6 @@ def _cleanup_expired():
         try:
             session = _sessions[sid]
             session["env"].cleanup()
-            import shutil
             shutil.rmtree(session.get("temp_dir", ""), ignore_errors=True)
         except Exception:
             pass
@@ -82,12 +87,13 @@ def _cleanup_expired():
 
 def _get_session(session_id: str) -> dict:
     """Get a session by ID, raising if not found."""
-    _cleanup_expired()
-    if session_id not in _sessions:
-        raise ValueError(f"Session '{session_id}' not found (expired or invalid)")
-    session = _sessions[session_id]
-    session["last_used"] = time.time()
-    return session
+    with _sessions_lock:
+        _cleanup_expired()
+        if session_id not in _sessions:
+            raise ValueError(f"Session '{session_id}' not found (expired or invalid)")
+        session = _sessions[session_id]
+        session["last_used"] = time.time()
+        return session
 
 
 @mcp.tool()
@@ -107,7 +113,9 @@ def rlm_init(
     Returns:
         session_id, context_info (file sizes, line counts, total chars).
     """
-    _cleanup_expired()
+    with _sessions_lock:
+        _cleanup_expired()
+
     _ensure_mlx_server()
 
     # Validate files exist
@@ -157,12 +165,13 @@ def rlm_init(
     env = REPLEnv(context_path=context_path, model=model)
 
     session_id = _generate_session_id()
-    _sessions[session_id] = {
-        "env": env,
-        "last_used": time.time(),
-        "context_path": context_path,
-        "temp_dir": temp_dir,
-    }
+    with _sessions_lock:
+        _sessions[session_id] = {
+            "env": env,
+            "last_used": time.time(),
+            "context_path": context_path,
+            "temp_dir": temp_dir,
+        }
 
     return {
         "session_id": session_id,
@@ -206,14 +215,14 @@ def rlm_exec(
 @mcp.tool()
 def rlm_cleanup(session_id: str) -> dict:
     """Clean up an RLM session and free resources."""
-    if session_id not in _sessions:
-        return {"status": "not_found", "message": f"Session '{session_id}' not found"}
+    with _sessions_lock:
+        if session_id not in _sessions:
+            return {"status": "not_found", "message": f"Session '{session_id}' not found"}
 
-    session = _sessions.pop(session_id)
+        session = _sessions.pop(session_id)
+
     try:
         session["env"].cleanup()
-        # Also clean up the context temp dir
-        import shutil
         shutil.rmtree(session.get("temp_dir", ""), ignore_errors=True)
     except Exception:
         pass

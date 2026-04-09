@@ -12,7 +12,6 @@ import openai
 
 _client: openai.OpenAI | None = None
 _client_lock = threading.Lock()
-_model_name: str | None = None
 
 CALL_TIMEOUT = 120
 
@@ -32,19 +31,14 @@ def get_client() -> openai.OpenAI:
 
 def _resolve_model() -> str:
     """Auto-detect the model name from the server's /v1/models endpoint."""
-    global _model_name
-    if _model_name is not None:
-        return _model_name
     try:
         client = get_client()
         models = client.models.list()
         if models.data:
-            _model_name = models.data[0].id
-            return _model_name
-    except Exception:
-        pass
-    _model_name = "default_model"
-    return _model_name
+            return models.data[0].id
+    except Exception as e:
+        raise RuntimeError(f"Failed to query model from LLM server: {e}") from e
+    raise RuntimeError("LLM server returned no models")
 
 
 def llm_completion(prompt: str, model: str | None = None) -> str:
@@ -76,18 +70,17 @@ def llm_completion_batch(
     Failed calls return the error message as a string.
     """
     results: list[str | None] = [None] * len(prompts)
+    batch_timeout = CALL_TIMEOUT * max(1, len(prompts) // 4)
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_idx = {
             executor.submit(llm_completion, prompt, model): i
             for i, prompt in enumerate(prompts)
         }
-        for future in as_completed(future_to_idx, timeout=CALL_TIMEOUT):
+        for future in as_completed(future_to_idx, timeout=batch_timeout):
             idx = future_to_idx[future]
             try:
-                results[idx] = future.result(timeout=CALL_TIMEOUT)
-            except TimeoutError:
-                results[idx] = "[LLM_ERROR] LLM call timed out"
+                results[idx] = future.result()
             except Exception as e:
                 results[idx] = f"[LLM_ERROR] {e}"
 
