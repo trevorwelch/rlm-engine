@@ -99,7 +99,7 @@ def _get_session(session_id: str) -> dict:
 @mcp.tool()
 def rlm_init(
     file_paths: list[str],
-    model: str = "default_model",
+    model: str | None = None,
 ) -> dict:
     """
     Initialize an RLM analysis session. Loads files into a Python REPL
