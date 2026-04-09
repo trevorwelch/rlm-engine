@@ -14,7 +14,7 @@ import threading
 import time
 from pathlib import Path
 
-from gemini_client import llm_completion, llm_completion_batch
+from llm_client import llm_completion, llm_completion_batch
 
 MAX_OUTPUT_CHARS = 12_000
 
