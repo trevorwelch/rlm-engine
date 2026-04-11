@@ -36,9 +36,17 @@ def _mlx_server_running() -> bool:
         return False
 
 
+def _is_remote_url() -> bool:
+    """Check if RLM_BASE_URL points to a remote API (not localhost)."""
+    base_url = os.getenv("RLM_BASE_URL", "http://localhost:8080/v1")
+    return not any(h in base_url for h in ("localhost", "127.0.0.1", "0.0.0.0"))
+
+
 def _ensure_mlx_server():
-    """Start mlx-lm server if it's not already running."""
+    """Start mlx-lm server if it's not already running. Skips for remote APIs."""
     global _mlx_process
+    if _is_remote_url():
+        return
     if _mlx_server_running():
         return
 

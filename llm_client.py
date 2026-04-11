@@ -30,7 +30,10 @@ def get_client() -> openai.OpenAI:
 
 
 def _resolve_model() -> str:
-    """Auto-detect the model name from the server's /v1/models endpoint."""
+    """Use RLM_MODEL env var, or auto-detect from the server's /v1/models endpoint."""
+    env_model = os.getenv("RLM_MODEL")
+    if env_model:
+        return env_model
     try:
         client = get_client()
         models = client.models.list()
